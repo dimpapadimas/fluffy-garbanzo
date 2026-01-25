@@ -1,4 +1,4 @@
-name: Python CI
+name: Node CI + Deploy
 
 on:
   workflow_dispatch:
@@ -16,35 +16,57 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Node
-      uses: actions/setup-node@v6
-      with:
-        node-version: '18'
+      - name: Install Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '18'
+          cache: 'npm'               # caches node_modules → faster repeat runs
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Run tests
-      run: npm test
+      - name: Run tests
+        run: npm test
+
+      - name: Build application
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: dist/                # ← change to your actual output folder (dist, build, out, etc.)
+          retention-days: 1          # optional: keep artifacts short-lived
+          if-no-files-found: error   # fail job if nothing was uploaded (safety)
 
   deploy:
     runs-on: ubuntu-latest
+    needs: build                   # ← this is the key dependency
+
+    # Optional but recommended: explicit condition (redundant here but useful when you add more logic later)
+    # if: ${{ needs.build.result == 'success' }}
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4   # usually still needed (for deploy scripts, config files, etc.)
 
-    - name: Install Node
-      uses: actions/setup-node@v6
-      with:
-        node-version: '18'
+      - name: Install Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '18'
+          # no cache needed here — we don't run npm install again
 
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Install dependencies
-      run: npm run build
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: dist/                # restores to ./dist/
 
-    - name: Deploy 
-      run: echo "Deploying ..."
+      - name: Deploy
+        run: |
+          echo "Deploying from ./dist/ ..."
+          # ls -la dist/
+          # aws s3 sync dist/ s3://my-bucket --delete    ← real example
+          # vercel --prod                                 ← another real example
+          # Your actual deploy command here
