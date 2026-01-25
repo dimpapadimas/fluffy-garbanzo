@@ -1,1 +1,0 @@
-requests==2.32.4   # uncomment + downgrade later to trigger vuln alert
