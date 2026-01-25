@@ -1,0 +1,21 @@
+name: Issue Informer
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  echo-description:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
+
+    steps:
+      - name: Echo issue description
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          echo "Issue title: $ISSUE_TITLE"
+          echo "Issue body:"
+          echo "$ISSUE_BODY"
